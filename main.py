@@ -9,7 +9,6 @@ from telegram.ext import (
     ContextTypes,
 )
 from utils import convert_docx_to_markdown
-from http import HTTPStatus
 import httpx
 
 # Настройка логирования
@@ -83,7 +82,7 @@ async def main() -> None:
         return
 
     # Установка вебхука
-    async with httpx.AsyncClient() as client:  # Без http2=True для простоты
+    async with httpx.AsyncClient() as client:
         try:
             await application.bot.set_webhook(
                 url=webhook_url,
@@ -96,13 +95,18 @@ async def main() -> None:
             return
 
     # Запуск веб-сервера
-    await application.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path=token,
-        webhook_url=webhook_url,
-    )
+    try:
+        await application.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            url_path=token,
+            webhook_url=webhook_url,
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при запуске веб-сервера: {e}")
+        raise
 
+# Запуск приложения без asyncio.run
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    application = Application.builder().token(os.getenv("TELEGRAM_TOKEN", "")).build()
+    application.run_async(main())
