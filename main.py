@@ -83,11 +83,11 @@ async def main() -> None:
         return
 
     # Установка вебхука
-    async with httpx.AsyncClient(http2=True) as client:
+    async with httpx.AsyncClient() as client:  # Без http2=True для простоты
         try:
             await application.bot.set_webhook(
                 url=webhook_url,
-                allowed_updates=Update.ALL_UPDATE_TYPES,
+                allowed_updates=["message"],  # Обрабатываем только сообщения (включая документы)
                 drop_pending_updates=True,
             )
             logger.info(f"Вебхук установлен на {webhook_url}")
