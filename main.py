@@ -58,7 +58,7 @@ async def main() -> None:
     token = os.getenv("TELEGRAM_TOKEN")
     if not token:
         logger.error("TELEGRAM_TOKEN не установлен")
-        return
+        raise ValueError("TELEGRAM_TOKEN не установлен")
 
     # Создание приложения
     application = (
@@ -79,7 +79,7 @@ async def main() -> None:
     webhook_url = os.getenv("WEBHOOK_URL")
     if not webhook_url:
         logger.error("WEBHOOK_URL не установлен")
-        return
+        raise ValueError("WEBHOOK_URL не установлен")
 
     # Установка вебхука
     async with httpx.AsyncClient() as client:
@@ -92,7 +92,7 @@ async def main() -> None:
             logger.info(f"Вебхук установлен на {webhook_url}")
         except Exception as e:
             logger.error(f"Ошибка при установке вебхука: {e}")
-            return
+            raise
 
     # Запуск веб-сервера
     try:
@@ -106,7 +106,10 @@ async def main() -> None:
         logger.error(f"Ошибка при запуске веб-сервера: {e}")
         raise
 
-# Запуск приложения без asyncio.run
 if __name__ == "__main__":
-    application = Application.builder().token(os.getenv("TELEGRAM_TOKEN", "")).build()
-    application.run_async(main())
+    import asyncio
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(main())
+    finally:
+        loop.close()
