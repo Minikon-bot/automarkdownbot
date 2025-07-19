@@ -72,7 +72,7 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     application.add_error_handler(error_handler)
 
-    # Установка вебхука и запуск сервера
+    # Запуск вебхука
     application.run_webhook(
         listen="0.0.0.0",
         port=port,
