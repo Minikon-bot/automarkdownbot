@@ -101,15 +101,11 @@ async def main() -> None:
             port=port,
             url_path=token,
             webhook_url=webhook_url,
+            close_loop=False,  # Не закрываем цикл вручную
         )
     except Exception as e:
         logger.error(f"Ошибка при запуске веб-сервера: {e}")
         raise
 
 if __name__ == "__main__":
-    import asyncio
-    loop = asyncio.get_event_loop()
-    try:
-        loop.run_until_complete(main())
-    finally:
-        loop.close()
+    main()  # Простой вызов main(), без управления циклом
