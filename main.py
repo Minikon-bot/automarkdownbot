@@ -53,7 +53,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(f"Update {update} вызвал ошибку: {context.error}")
 
-async def main() -> None:
+def main() -> None:
     # Получение токена и URL из переменных окружения
     token = os.getenv("TELEGRAM_TOKEN")
     if not token:
@@ -81,32 +81,36 @@ async def main() -> None:
     application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     application.add_error_handler(error_handler)
 
+    # Инициализация приложения
+    application.initialize()
+
     # Установка вебхука
-    async with httpx.AsyncClient() as client:
-        try:
-            await application.bot.set_webhook(
-                url=webhook_url,
-                allowed_updates=["message"],  # Обрабатываем только сообщения (включая документы)
-                drop_pending_updates=True,
-            )
-            logger.info(f"Вебхук установлен на {webhook_url}")
-        except Exception as e:
-            logger.error(f"Ошибка при установке вебхука: {e}")
-            raise
+    try:
+        application.bot.set_webhook(
+            url=webhook_url,
+            allowed_updates=["message"],  # Обрабатываем только сообщения (включая документы)
+            drop_pending_updates=True,
+        )
+        logger.info(f"Вебхук установлен на {webhook_url}")
+    except Exception as e:
+        logger.error(f"Ошибка при установке вебхука: {e}")
+        application.shutdown()
+        raise
 
     # Запуск веб-сервера
     try:
-        await application.run_webhook(
+        application.updater.start_webhook(
             listen="0.0.0.0",
             port=port,
             url_path=token,
             webhook_url=webhook_url,
-            close_loop=False,  # Не закрываем цикл вручную
         )
+        application.start()
+        application.run_forever()
     except Exception as e:
         logger.error(f"Ошибка при запуске веб-сервера: {e}")
+        application.shutdown()
         raise
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    main()
