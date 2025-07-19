@@ -1,5 +1,6 @@
 import logging
 import os
+import asyncio
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -46,7 +47,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(f"Update {update} вызвал ошибку: {context.error}")
 
-def main() -> None:
+async def main() -> None:
     # Получение переменных окружения
     token = os.getenv("TELEGRAM_TOKEN")
     if not token:
@@ -72,15 +73,21 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     application.add_error_handler(error_handler)
 
-    # Инициализация приложения и запуск вебхука
-    application.run_webhook(
+    # Установка вебхука
+    await application.bot.set_webhook(
+        url=webhook_url,
+        allowed_updates=["message"],
+        drop_pending_updates=True,
+    )
+    logger.info(f"Вебхук установлен на {webhook_url}")
+
+    # Запуск вебхука
+    await application.run_webhook(
         listen="0.0.0.0",
         port=port,
         url_path=token,
         webhook_url=webhook_url,
-        allowed_updates=["message"],
-        drop_pending_updates=True,
     )
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
