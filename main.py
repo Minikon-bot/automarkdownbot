@@ -9,7 +9,6 @@ from telegram.ext import (
     ContextTypes,
 )
 from utils import convert_docx_to_markdown
-import httpx
 
 # Настройка логирования
 logging.basicConfig(
@@ -35,26 +34,20 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         try:
             file = await context.bot.get_file(document.file_id)
             file_bytes = await file.download_as_bytearray()
-
-            # Конвертация документа в Markdown
             markdown_text = convert_docx_to_markdown(file_bytes)
-
-            # Отправка результата в чат
             await message.reply_text(markdown_text, parse_mode="MarkdownV2")
         except Exception as e:
             logger.error(f"Ошибка при обработке документа: {e}")
-            await message.reply_text(
-                "Произошла ошибка при обработке документа. Пожалуйста, попробуйте снова."
-            )
+            await message.reply_text("Произошла ошибка. Попробуйте снова.")
     else:
-        await message.reply_text("Пожалуйста, отправьте документ в формате .doc или .docx.")
+        await message.reply_text("Отправьте документ в формате .doc или .docx.")
 
 # Обработчик ошибок
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(f"Update {update} вызвал ошибку: {context.error}")
 
-def main() -> None:
-    # Получение токена и URL из переменных окружения
+async def main() -> None:
+    # Получение переменных окружения
     token = os.getenv("TELEGRAM_TOKEN")
     if not token:
         logger.error("TELEGRAM_TOKEN не установлен")
@@ -65,14 +58,12 @@ def main() -> None:
         logger.error("WEBHOOK_URL не установлен")
         raise ValueError("WEBHOOK_URL не установлен")
 
-    port = int(os.getenv("PORT", 10000))  # Render использует порт 10000 по умолчанию
+    port = int(os.getenv("PORT", 10000))
 
     # Создание приложения
     application = (
         Application.builder()
         .token(token)
-        .http_version("1.1")
-        .get_updates_http_version("1.1")
         .build()
     )
 
@@ -81,36 +72,22 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     application.add_error_handler(error_handler)
 
-    # Инициализация приложения
-    application.initialize()
-
     # Установка вебхука
-    try:
-        application.bot.set_webhook(
-            url=webhook_url,
-            allowed_updates=["message"],  # Обрабатываем только сообщения (включая документы)
-            drop_pending_updates=True,
-        )
-        logger.info(f"Вебхук установлен на {webhook_url}")
-    except Exception as e:
-        logger.error(f"Ошибка при установке вебхука: {e}")
-        application.shutdown()
-        raise
+    await application.bot.set_webhook(
+        url=webhook_url,
+        allowed_updates=["message"],
+        drop_pending_updates=True,
+    )
+    logger.info(f"Вебхук установлен на {webhook_url}")
 
-    # Запуск веб-сервера
-    try:
-        application.updater.start_webhook(
-            listen="0.0.0.0",
-            port=port,
-            url_path=token,
-            webhook_url=webhook_url,
-        )
-        application.start()
-        application.run_forever()
-    except Exception as e:
-        logger.error(f"Ошибка при запуске веб-сервера: {e}")
-        application.shutdown()
-        raise
+    # Запуск вебхука
+    await application.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=token,
+        webhook_url=webhook_url,
+    )
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
