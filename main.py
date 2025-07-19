@@ -60,6 +60,13 @@ async def main() -> None:
         logger.error("TELEGRAM_TOKEN не установлен")
         raise ValueError("TELEGRAM_TOKEN не установлен")
 
+    webhook_url = os.getenv("WEBHOOK_URL")
+    if not webhook_url:
+        logger.error("WEBHOOK_URL не установлен")
+        raise ValueError("WEBHOOK_URL не установлен")
+
+    port = int(os.getenv("PORT", 10000))  # Render использует порт 10000 по умолчанию
+
     # Создание приложения
     application = (
         Application.builder()
@@ -73,13 +80,6 @@ async def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     application.add_error_handler(error_handler)
-
-    # Настройка вебхука
-    port = int(os.getenv("PORT", 10000))  # Render использует порт 10000 по умолчанию
-    webhook_url = os.getenv("WEBHOOK_URL")
-    if not webhook_url:
-        logger.error("WEBHOOK_URL не установлен")
-        raise ValueError("WEBHOOK_URL не установлен")
 
     # Установка вебхука
     async with httpx.AsyncClient() as client:
@@ -108,4 +108,5 @@ async def main() -> None:
         raise
 
 if __name__ == "__main__":
-    main()  # Простой вызов main(), без управления циклом
+    import asyncio
+    asyncio.run(main())
