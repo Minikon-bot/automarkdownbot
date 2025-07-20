@@ -1,6 +1,6 @@
 import logging
 import os
-from telegram import Update
+from telegram import Update, InputFile
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -9,6 +9,7 @@ from telegram.ext import (
     ContextTypes,
 )
 from utils import convert_docx_to_markdown
+from io import BytesIO
 
 # Настройка логирования
 logging.basicConfig(
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Обработчик команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "Привет! Отправь мне документ Word, и я верну его в формате Markdown."
+        "Привет! Отправь мне документ Word (.docx), и я верну его в формате .txt с Markdown-форматированием."
     )
 
 # Обработчик документов
@@ -35,7 +36,16 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             file = await context.bot.get_file(document.file_id)
             file_bytes = await file.download_as_bytearray()
             markdown_text = convert_docx_to_markdown(file_bytes)
-            await message.reply_text(markdown_text, parse_mode="MarkdownV2")
+            
+            # Создаём .txt файл
+            output = BytesIO()
+            output.write(markdown_text.encode('utf-8'))
+            output.seek(0)
+            
+            await message.reply_document(
+                document=InputFile(output, filename='formatted.txt'),
+                caption="Вот твой отформатированный текст в .txt файле"
+            )
         except Exception as e:
             logger.error(f"Ошибка при обработке документа: {e}")
             await message.reply_text("Произошла ошибка. Попробуйте снова.")
