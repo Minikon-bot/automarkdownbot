@@ -44,8 +44,7 @@ async def send_button_message(chat_id, context: ContextTypes.DEFAULT_TYPE) -> No
         reply_markup=reply_markup
     )
 
-# Обн
-System: овленный обработчик нажатия кнопки
+# Обработчик нажатия кнопки
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()  # Подтверждаем нажатие кнопки
@@ -127,9 +126,7 @@ def main() -> None:
     # Получение переменных окружения
     token = os.getenv("TELEGRAM_TOKEN")
     if not token:
-        logger
-
-System: .error("TELEGRAM_TOKEN не установлен")
+        logger.error("TELEGRAM_TOKEN не установлен")
         raise ValueError("TELEGRAM_TOKEN не установлен")
 
     webhook_url = os.getenv("WEBHOOK_URL")
@@ -139,7 +136,7 @@ System: .error("TELEGRAM_TOKEN не установлен")
 
     port = int(os.getenv("PORT", 10000))
 
-    # Создание приложения без явного указания JobQueue
+    # Создание приложения
     application = (
         Application.builder()
         .token(token)
