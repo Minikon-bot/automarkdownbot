@@ -31,19 +31,55 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply_markup=reply_markup
     )
 
+# Функция для отправки сообщения с кнопкой
+async def send_button_message(chat_id, context: ContextTypes.DEFAULT_TYPE) -> None:
+    keyboard = [
+        [InlineKeyboardButton("Хочу получить отформатированный текст", callback_data="start_formatting")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="Нажми кнопку, чтобы получить ещё один отформатированный текст.",
+        reply_markup=reply_markup
+    )
+
 # Обработчик нажатия кнопки
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()  # Подтверждаем нажатие кнопки
     
     if query.data == "start_formatting":
+        chat_id = query.message.chat_id
         await query.message.reply_text("Бот запускается, пожалуйста, подождите...")
-        # Сообщение о готовности будет отправлено после инициализации вебхука в main()
+        
+        # Сохраняем chat_id для отправки уведомления о готовности
+        context.bot_data['last_chat_id'] = chat_id
+        
+        # Планируем отправку сообщения "Теперь отправляй мне файл" через 50 секунд
+        context.job_queue.run_once(
+            callback=send_ready_message,
+            when=50,
+            data={'chat_id': chat_id},
+            name=f"ready_{chat_id}"
+        )
+
+# Функция для отправки сообщения о готовности
+async def send_ready_message(context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = context.job.data['chat_id']
+    try:
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Теперь отправляй мне файл"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при отправке сообщения о готовности: {e}")
 
 # Обработчик документов
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
     document = message.document
+    chat_id = message.chat_id
 
     if document.mime_type in [
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -63,6 +99,10 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 document=InputFile(output, filename='formatted.txt'),
                 caption="Вот твой отформатированный текст в .txt файле"
             )
+            
+            # Отправляем сообщение с кнопкой после успешной отправки файла
+            await send_button_message(chat_id, context)
+            
         except Exception as e:
             logger.error(f"Ошибка при обработке документа: {e}")
             await message.reply_text("Произошла ошибка. Попробуйте снова.")
@@ -109,22 +149,6 @@ def main() -> None:
         allowed_updates=["message", "callback_query"],
         drop_pending_updates=True,
     )
-
-    # Отправка сообщения о готовности всем пользователям, ожидающим ответа
-    async def notify_ready():
-        if application.bot:
-            # Можно хранить chat_id пользователей, нажавших кнопку, в context.bot_data
-            # Для простоты отправляем в последний чат, но это можно улучшить
-            if hasattr(context, 'bot') and hasattr(context.bot, 'send_message'):
-                await application.bot.send_message(
-                    chat_id=context.bot_data.get('last_chat_id', None),
-                    text="Теперь отправляй мне файл"
-                )
-
-    # Запускаем уведомление о готовности после старта вебхука
-    import asyncio
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(notify_ready())
 
 if __name__ == "__main__":
     main()
