@@ -56,6 +56,15 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # Сохраняем chat_id для отправки уведомления о готовности
         context.bot_data['last_chat_id'] = chat_id
         
+        # Проверяем, что job_queue доступен
+        if context.job_queue is None:
+            logger.error("JobQueue не инициализирован")
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text="Произошла ошибка при запуске. Пожалуйста, попробуйте снова через минуту."
+            )
+            return
+            
         # Планируем отправку сообщения "Теперь отправляй мне файл" через 50 секунд
         context.job_queue.run_once(
             callback=send_ready_message,
@@ -127,10 +136,11 @@ def main() -> None:
 
     port = int(os.getenv("PORT", 10000))
 
-    # Создание приложения
+    # Создание приложения с включённым JobQueue
     application = (
         Application.builder()
         .token(token)
+        .job_queue(True)  # Включаем JobQueue
         .build()
     )
 
