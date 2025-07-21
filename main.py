@@ -140,7 +140,7 @@ def main() -> None:
     application = (
         Application.builder()
         .token(token)
-        .job_queue(True)  # Включаем JobQueue
+        .job_queue()  # Включаем JobQueue без аргументов
         .build()
     )
 
